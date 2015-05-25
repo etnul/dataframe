@@ -1,7 +1,7 @@
 require 'minitest_helper'
 require 'pry'
 
-class TestDataframe < MiniTest::Unit::TestCase
+class TestDataframe < Minitest::Test
 
   def setup
     @source1 = [

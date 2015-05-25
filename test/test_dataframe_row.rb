@@ -1,6 +1,6 @@
 require 'minitest_helper'
 
-class TestDataframeRow < MiniTest::Unit::TestCase
+class TestDataframeRow < Minitest::Test
 
   def test_wrapping
     assert Dataframe::Row({:a => 1}).is_a?(Dataframe::RowType)
