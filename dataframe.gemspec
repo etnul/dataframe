@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.version       = Dataframe::VERSION
   spec.authors       = ["Claus Dahl"]
   spec.email         = ["dee@classy.dk"]
-  spec.summary       = %q{TODO: Write a short summary. Required.}
-  spec.description   = %q{TODO: Write a longer description. Optional.}
+  spec.summary       = %q{Lazy chainable data processing for table oriented data}
+  spec.description   = %q{Provides useful chainable data munging for data mining use. Compute columns, reshape table data etc.}
   spec.homepage      = ""
   spec.license       = "MIT"
 
