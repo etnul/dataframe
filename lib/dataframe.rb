@@ -58,7 +58,7 @@ module Dataframe
     def join(right_collection, key, joined_key = nil, &merge_plan)
       unless merge_plan
         merge_plan = Proc.new  do |a,b|
-          if b
+          if b && a
             b.merge(a)
           else
             nil
@@ -76,7 +76,7 @@ module Dataframe
           join.yield res if res
         end
       end
-      return Dataframe(joined_collection, Dataframe::Table.noop)
+      return Dataframe::Table.new(joined_collection, Dataframe::Table.noop)
     end
 
     def all

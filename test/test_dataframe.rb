@@ -5,9 +5,9 @@ class TestDataframe < Minitest::Test
 
   def setup
     @source1 = [
-      {:a => 1, :year => 2012, :key => 'abe'},
-      {:a => 5, :year => 2013, :key => 'banan'},
-      {:a => 45, :year => 2014, :key => 'konto'}
+      {:foo => 1, :year => 2012, :bar => 'abe'},
+      {:foo => 5, :year => 2013, :bar => 'banan'},
+      {:foo => 45, :year => 2014, :bar => 'konto'}
     ]
     @source2 = [
       {:a => 1, :year => 2012, :key => 'abe'},
@@ -61,14 +61,19 @@ class TestDataframe < Minitest::Test
     @a.compute(:new_field) {|row| row.a * 10}.select {|row| a.new_field == 10}
   end
 
-  # def test_joins
-  #
-  # end
-  #
+  def test_joins
+    result = @b.join(@a, :year).all
+    assert_equal 3, result.count
+    rows2012 = result.select {|r| r.year == 2012}
+    assert_equal 2, rows2012.count
+    assert_equal 'abe', rows2012.first.bar
+    assert_equal 2, rows2012.map {|r| r.foo}.inject(&:+)
+  end
+
   # def test_radicals
   #   # r = Dataframe::Table.compute(:column_name) {}
   #   # Dataframe::Table.combine(r) # same as Dataframe::Table.compute(:column:name) {}
   #
   # end
-  #
+
 end
