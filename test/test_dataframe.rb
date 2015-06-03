@@ -70,6 +70,11 @@ class TestDataframe < Minitest::Test
     assert_equal 2, rows2012.map {|r| r.foo}.inject(&:+)
   end
 
+  def test_columns
+    result = @a.columns(:foo, :year).all
+    assert_equal [:foo, :year], result.first.keys.sort
+  end
+
   # def test_radicals
   #   # r = Dataframe::Table.compute(:column_name) {}
   #   # Dataframe::Table.combine(r) # same as Dataframe::Table.compute(:column:name) {}
