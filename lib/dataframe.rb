@@ -54,6 +54,13 @@ module Dataframe
       return Dataframe::Table.new(new_collection, Dataframe::Table.noop)
     end
 
+    def columns(*names)
+      new_chain = Proc.new do |row|
+        chain.call(row).select {|k,v| names.map{|name| name.to_s}.include?(k.to_s)}
+      end
+      Dataframe::Table.new(self.raw_data, new_chain)
+    end
+
     # merge rows identified by key
     def join(right_collection, key, joined_key = nil, &merge_plan)
       unless merge_plan
