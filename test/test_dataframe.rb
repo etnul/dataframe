@@ -57,6 +57,14 @@ class TestDataframe < Minitest::Test
 
   end
 
+  def test_collect
+    results = @b.collect(:a, :key, ['abe', 'banan'], :year).all
+    assert_equal 2, results.count
+    assert_equal results.first.keys, results.last.keys
+    assert_equal ['keyabe', 'keybanan', :year], results.first.keys
+    assert_equal nil, results.last.keyabe
+  end
+
   def test_chainable
     @a.compute(:new_field) {|row| row.a * 10}.select {|row| a.new_field == 10}
   end

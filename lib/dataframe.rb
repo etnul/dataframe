@@ -23,7 +23,7 @@ module Dataframe
     end
 
     # actually compute what's defined - not sure this is it really
-    def each(&block)
+    def each(&block) #what about that block???
       self.enumerate.each do |row|
         yield row
       end
@@ -45,6 +45,36 @@ module Dataframe
         block.call(nil, yielder)
       end
       return Dataframe::Table.new(new_collection, Dataframe::Table.noop)
+    end
+
+    # from long to wide:
+    # accumulate value_field values,
+    # index by per_field values,
+    # format [[field_name, field_value], ....] <-- include these
+    # one row per by_field values
+    def collect(value_field, per_field, per_values, by_field)
+      by_value = nil
+      outrow = {}
+      self.reshape do |row, yielder|
+        if row
+          if row[by_field] != by_value #start next row
+            if by_value #emit previous
+              yielder.yield(Dataframe::Row(outrow))
+            end
+            outrow = {}
+            if per_values # support placeholders
+              per_values.each do |v|
+                outrow[per_field.to_s + v.to_s] = nil
+              end
+            end
+            by_value = row[by_field]
+            outrow[by_field] = by_value
+          end
+          outrow[per_field.to_s + row[per_field].to_s] = row[value_field] if per_values.nil? || per_values.include?(row[per_field])
+        else #get the last row
+          yielder.yield(Dataframe::Row(outrow))
+        end
+      end
     end
 
     def select(&block)
