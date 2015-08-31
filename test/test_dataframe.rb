@@ -58,11 +58,13 @@ class TestDataframe < Minitest::Test
   end
 
   def test_collect
-    results = @b.collect(:a, :key, ['abe', 'banan'], :year).all
+    results = @b.collect(:year, :key, :a, ['abe', 'banan']).all
     assert_equal 2, results.count
     assert_equal results.first.keys, results.last.keys
-    assert_equal ['keyabe', 'keybanan', :year], results.first.keys
-    assert_equal nil, results.last.keyabe
+    assert_equal ['abe', 'banan', :year], results.first.keys
+    assert_equal nil, results.last.abe
+    assert_equal 1, results.first.abe
+    assert_equal 5, results.first.banan
   end
 
   def test_chainable

@@ -52,7 +52,8 @@ module Dataframe
     # index by per_field values,
     # format [[field_name, field_value], ....] <-- include these
     # one row per by_field values
-    def collect(value_field, per_field, per_values, by_field)
+    def collect(by_field, per_field, value_field, per_values = nil, options = {})
+      options = {:key_prefix => ''}.merge(options)
       by_value = nil
       outrow = {}
       self.reshape do |row, yielder|
@@ -64,13 +65,13 @@ module Dataframe
             outrow = {}
             if per_values # support placeholders
               per_values.each do |v|
-                outrow[per_field.to_s + v.to_s] = nil
+                outrow[options[:key_prefix] + v.to_s] = nil
               end
             end
             by_value = row[by_field]
             outrow[by_field] = by_value
           end
-          outrow[per_field.to_s + row[per_field].to_s] = row[value_field] if per_values.nil? || per_values.include?(row[per_field])
+          outrow[options[:key_prefix] + row[per_field].to_s] = row[value_field] if per_values.nil? || per_values.include?(row[per_field])
         else #get the last row
           yielder.yield(Dataframe::Row(outrow))
         end
