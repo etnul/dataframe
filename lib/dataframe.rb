@@ -201,6 +201,10 @@ module Dataframe
       # run througn this, build index - append if desired
     end
 
+    def sort(&block)
+      Dataframe::Table.new(self.all.sort(&block))
+    end
+
     # merge rows identified by key
     def join(right_collection, key, joined_key = nil, &merge_plan)
       unless merge_plan
