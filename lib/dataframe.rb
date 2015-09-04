@@ -1,5 +1,6 @@
 require "dataframe/version"
 require "dataframe/row"
+require "dataframe/exception"
 require 'pry'
 
 module Dataframe
@@ -52,6 +53,20 @@ module Dataframe
     # index by per_field values,
     # format [[field_name, field_value], ....] <-- include these
     # one row per by_field values
+    # example input
+    # DATE        ITEM      PRICE
+    # 2010-01-01  shoes     23.45
+    # 2010-01-01  socks     5.95
+    # 2011-03-04  socks     12.23
+    # 2011-05-05  candles   0.99
+    #
+    # collect(DATE, ITEM, PRICE, [shoes, socks])
+    # generates
+    # DATE        ITEM_shoes ITEM_socks
+    # 2010-01-01  23.45      5.95
+    # 2011-03-04  nil        12.23
+    #
+    # The candles date is dropped
     def collect(by_field, per_field, value_field, per_values = nil, options = {})
       options = {:key_prefix => ''}.merge(options)
       by_value = nil
@@ -133,13 +148,14 @@ module Dataframe
     # require presence of each value or insert blank row
     # add missing rows
     def fill(*mapping)
+      mapping = mapping.first
       # exception if mapping length other than to
       throw Dataframe::ArgumentError.new('fill(:key => value_array) required') unless
-        mapping.length == 2 && mapping.last.is_a?(Array)
+        mapping.is_a?(Hash) && mapping.count == 1 && mapping.values.first.is_a?(Array)
 
-      key = mapping.first
+      key = mapping.keys.first
       values = {}
-      mapping.last.each do |value|
+      mapping.values.first.each do |value|
         values[value] = true
       end
       new_collection = Enumerator.new do |yielder|

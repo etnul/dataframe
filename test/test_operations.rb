@@ -51,6 +51,11 @@ class TestOperations < Minitest::Test
     assert_equal renamed.first[:baz], @a.first[:bar]
   end
 
+  def test_fill
+    filled = @a.fill(:year => [1900, 1910, 1920, 1930])
+    assert_equal filled.count, 7
+  end
+
   def test_from
   end
 
