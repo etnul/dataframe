@@ -14,8 +14,14 @@ class TestOperations < Minitest::Test
       {:a => 5, :year => 2012, :key => 'banan'},
       {:a => 45, :year => 2014, :key => 'kontoer'}
     ]
+    @string_source = [
+      {'a' => 1, :year => 2012, :key => 'abe'},
+      {'a' => 5, :year => 2012, :key => 'banan'},
+      {'a' => 45, :year => 2014, :key => 'kontoer'}
+    ]
     @a = Dataframe::Table.new(@source1)
     @b = Dataframe::Table.new(@source2)
+    @c = Dataframe::Table.new(@string_source)
   end
 
   def test_compute
@@ -46,7 +52,7 @@ class TestOperations < Minitest::Test
   end
 
   def test_rename
-    renamed = @a.rename(:bar => :baz)
+    renamed = @a.rename(:bar => :baz, :noop => :frotz)
     assert renamed
     assert_equal renamed.first[:baz], @a.first[:bar]
   end

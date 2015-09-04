@@ -70,23 +70,24 @@ module Dataframe
     def collect(by_field, per_field, value_field, per_values = nil, options = {})
       options = {:key_prefix => ''}.merge(options)
       by_value = nil
-      outrow = {}
+      template_row = {}
+      if per_values # support placeholders
+        per_values.each do |v|
+          template_row[(options[:key_prefix] + v.to_s).to_sym] = nil
+        end
+      end
+      outrow = template_row.dup
       self.reshape do |row, yielder|
         if row
           if row[by_field] != by_value #start next row
-            if by_value #emit previous
+            if by_value #emit previous if it exists
               yielder.yield(Dataframe::Row(outrow))
             end
-            outrow = {}
-            if per_values # support placeholders
-              per_values.each do |v|
-                outrow[options[:key_prefix] + v.to_s] = nil
-              end
-            end
+            outrow = template_row.dup
             by_value = row[by_field]
             outrow[by_field] = by_value
           end
-          outrow[options[:key_prefix] + row[per_field].to_s] = row[value_field] if per_values.nil? || per_values.include?(row[per_field])
+          outrow[(options[:key_prefix] + row[per_field].to_s).to_sym] = row[value_field] if per_values.nil? || per_values.include?(row[per_field])
         else #get the last row
           yielder.yield(Dataframe::Row(outrow))
         end
