@@ -85,11 +85,104 @@ module Dataframe
       return Dataframe::Table.new(new_collection, Dataframe::Table.noop)
     end
 
-    def columns(*names)
+    def pick(*names)
+      if names.first.is_a?(Hash) && names.count == 1
+        hnames = names.first
+      else
+        hnames = Hash[*(names.map {|n| [n, nil]}.flatten)]
+      end
       new_chain = Proc.new do |row|
-        chain.call(row).select {|k,v| names.map{|name| name.to_s}.include?(k.to_s)}
+        hn = hnames.dup
+        crow = chain.call(row)
+        # p crow
+        hn.each {|k,v| hn[k] = crow[k]}
+        Dataframe.Row(hn)
       end
       Dataframe::Table.new(self.raw_data, new_chain)
+    end
+
+    # arg: :old_name => :new_name, :other_old_name => :other_new_name
+    # renames a column
+    def rename(*mapping)
+      new_chain = Proc.new do |row|
+        crow = chain.call(row).dup
+        old_new = Hash[*mapping]
+        old_new.each do |old_key, new_key|
+          crow[new_key] = crow.delete(old_key)
+        end
+        crow
+      end
+      Dataframe::Table.new(self.raw_data, new_chain)
+    end
+
+    # arg: :column_name => :default_value, :other_column_name => :other_default_value
+    # replace nil values with indicated default
+    def default(*mapping)
+      new_chain = Proc.new do |row|
+        crow = chain.call(row).dup
+        key_default = Hash[*mapping]
+        key_default.each do |key, default|
+          crow[key] = default if crow[key].nil?
+        end
+        crow
+      end
+      Dataframe::Table.new(self.raw_data, new_chain)
+    end
+
+    # arg :key => values_array
+    # require presence of each value or insert blank row
+    # add missing rows
+    def fill(*mapping)
+      # exception if mapping length other than to
+      throw Dataframe::ArgumentError.new('fill(:key => value_array) required') unless
+        mapping.length == 2 && mapping.last.is_a?(Array)
+
+      key = mapping.first
+      values = {}
+      mapping.last.each do |value|
+        values[value] = true
+      end
+      new_collection = Enumerator.new do |yielder|
+        self.each {|row| values.delete(row[key]); yielder.yield row}
+        values.keys.each do |value|
+          row = {}
+          # TODO - ensure a fixed column list....
+          row[key] = value
+          yielder.yield row
+        end
+      end
+      return Dataframe::Table.new(new_collection, Dataframe::Table.noop)
+    end
+
+    # quite nasty - scans both collections.
+    # some day I should build a lookup abstraction which could be optimized
+    # against storage
+    def from(other_collection, join_condition, columns, prefix = 'other_')
+      other_index = {}
+      other_collection.pick(join_condition.values).each_with_index do |row, i|
+        other_index[row.values] = row
+      end
+      new_chain = Proc.new do |row|
+        crow = chain.call(row)
+        insertable = other_collection[join_condition.map {|k,v| crow[k]}]
+        columns.each {|k| crow[(other_ + k.to_s).to_sym] = insertable[k]} if insertable
+        Dataframe.Row(crow)
+      end
+      Dataframe::Table.new(self.raw_data, new_chain)
+    end
+
+    # arg: :column_name => column_rule
+    # nil out values that don't match given criteria
+    # can't build until I've figured out how to formulate the rules
+    def normalize_values(*rules)
+      # TODO
+    end
+
+
+    # TODO options hash?
+    def merge(other_collection, merge_keys, options = {:merge_type => :ignore})
+      # :ignore, :append, :replace, :fail
+      # run througn this, build index - append if desired
     end
 
     # merge rows identified by key

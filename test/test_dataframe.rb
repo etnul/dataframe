@@ -81,7 +81,7 @@ class TestDataframe < Minitest::Test
   end
 
   def test_columns
-    result = @a.columns(:foo, :year).all
+    result = @a.pick(:foo => :foo, :year => :year).all
     assert_equal [:foo, :year], result.first.keys.sort
   end
 
