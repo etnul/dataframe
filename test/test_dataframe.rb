@@ -61,14 +61,23 @@ class TestDataframe < Minitest::Test
     results = @b.collect(:year, :key, :a, ['abe', 'banan']).all
     assert_equal 2, results.count
     assert_equal results.first.keys, results.last.keys
-    assert_equal ['abe', 'banan', :year], results.first.keys
+    assert_equal [:abe, :banan, :year], results.first.keys
     assert_equal nil, results.last.abe
     assert_equal 1, results.first.abe
     assert_equal 5, results.first.banan
+    assert_equal nil, results.last.abe
+    assert_equal nil, results.last.banan
+    results2 = @b.collect(:year, :key, :a, [:abe, :banan]).all
+    assert_equal results2.last.values, results.last.values
   end
 
   def test_chainable
-    @a.compute(:new_field) {|row| row.a * 10}.select {|row| a.new_field == 10}
+    chained = @b.compute(:new_field) {|row| row[:a] * 10}.select {|row| row[:new_field] == 10}
+    assert_equal 1, chained.count
+    chained_collect = @b.compute(:new_field) {|row| row[:a] * 10}.collect(:year, :key, :new_field)
+    # binding.pry
+    assert_equal 2, chained_collect.count
+    assert_equal 10, chained_collect.all.first[:abe]
   end
 
   def test_joins

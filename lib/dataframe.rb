@@ -68,6 +68,7 @@ module Dataframe
     #
     # The candles date is dropped
     def collect(by_field, per_field, value_field, per_values = nil, options = {})
+      per_values.map!(&:to_sym) if per_values
       options = {:key_prefix => ''}.merge(options)
       by_value = nil
       template_row = {}
@@ -78,6 +79,7 @@ module Dataframe
       end
       outrow = template_row.dup
       self.reshape do |row, yielder|
+        # p row
         if row
           if row[by_field] != by_value #start next row
             if by_value #emit previous if it exists
@@ -87,9 +89,10 @@ module Dataframe
             by_value = row[by_field]
             outrow[by_field] = by_value
           end
-          outrow[(options[:key_prefix] + row[per_field].to_s).to_sym] = row[value_field] if per_values.nil? || per_values.include?(row[per_field])
+          outrow[(options[:key_prefix] + row[per_field].to_s).to_sym] = row[value_field] if per_values.nil? || per_values.include?(row[per_field].to_sym)
         else #get the last row
           yielder.yield(Dataframe::Row(outrow))
+          by_value = nil
         end
       end
     end
@@ -126,7 +129,7 @@ module Dataframe
         old_new.each do |old_key, new_key|
           crow[new_key] = crow.delete(old_key)
         end
-        crow
+        Dataframe.Row(crow)
       end
       Dataframe::Table.new(self.raw_data, new_chain)
     end

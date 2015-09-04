@@ -54,7 +54,7 @@ class TestOperations < Minitest::Test
   def test_rename
     renamed = @a.rename(:bar => :baz, :noop => :frotz)
     assert renamed
-    assert_equal renamed.first[:baz], @a.first[:bar]
+    assert_equal renamed.all.first[:baz], @a.all.first[:bar]
   end
 
   def test_fill
