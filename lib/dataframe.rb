@@ -205,8 +205,12 @@ module Dataframe
       # run througn this, build index - append if desired
     end
 
-    def sort(&block)
-      Dataframe::Table.new(self.all.sort(&block))
+    def sort(fieldname = nil, &block)
+      if fieldname
+        Dataframe::Table.new(self.all.sort {|a,b| a[fieldname] <=> b[fieldname]})
+      else
+        Dataframe::Table.new(self.all.sort(&block))
+      end
     end
 
     # merge rows identified by key

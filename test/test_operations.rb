@@ -63,9 +63,12 @@ class TestOperations < Minitest::Test
   end
 
   def test_sort
-    sorted = @a.fill(:year => (1..20).map {1900 + rand(100)}).sort {|a,b| a[:year] <=> b[:year] }
+    bigger_a = @a.fill(:year => (1..20).map {1900 + rand(100)})
+    sorted = bigger_a.sort {|a,b| a[:year] <=> b[:year] }
     assert sorted.is_a?(Dataframe::Table)
     assert_equal sorted.map {|s| s[:year]}, sorted.map {|s| s[:year]}.sort
+    field_sorted = bigger_a.sort(:year)
+    assert_equal field_sorted.map {|s| s[:year]}, sorted.map {|s| s[:year]}
   end
 
   def test_from
