@@ -103,6 +103,13 @@ module Dataframe
       end
     end
 
+    # assumes dataset is already sorted
+    # inputs are formatted like
+    # by = a field or array of fields
+    # rules = a list of name => lambdafunc pairs
+    # the name will be the names of fields in new collection
+    # the lambda computes the value given a array of input values
+    # no this does not scale to millions of rows AT ALL
     def group(by, *rules)
       by = [by].flatten
       rules = rules.shift
