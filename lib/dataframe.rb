@@ -3,6 +3,8 @@ require "dataframe/row"
 require "dataframe/exception"
 require 'pry'
 
+# TODO - input validation and throw argument errors
+
 module Dataframe
   class Table
     include Enumerable
@@ -37,6 +39,10 @@ module Dataframe
         row
       end
       Dataframe::Table.new(self.raw_data, new_chain)
+    end
+
+    def map(*args, &block)
+      self.all.map(*args, &block)
     end
 
     # return multiple rows
@@ -97,6 +103,42 @@ module Dataframe
       end
     end
 
+    def group(by, *rules)
+      by = [by].flatten
+      rules = rules.shift
+      collector_row = {}
+      group_value = nil
+      self.reshape do |row, yielder|
+        if row
+          if row.pick(*by) != group_value
+            if group_value
+              outrow = {}
+              # binding.pry
+              rules.each do |field, rule|
+                outrow[field] = rule.call(collector_row)
+              end
+              yielder.yield(Dataframe::Row(outrow))
+            end
+            (row.keys + collector_row.keys).each do |k|
+              collector_row[k] = [row[k]]
+            end
+            group_value = row.pick(*by)
+          else
+            collector_row.keys.each do |k|
+              collector_row[k].push(row[k])
+            end
+          end
+        else
+          outrow = {}
+          rules.each do |field, rule|
+            outrow[field] = rule.call(collector_row)
+          end
+          yielder.yield(Dataframe::Row(outrow))
+          group_value = nil
+        end
+      end
+    end
+
     def select(&block)
       new_collection = Enumerator.new do |yielder|
         self.each {|row| yielder.yield row if block.call(row)}
@@ -151,6 +193,9 @@ module Dataframe
     # arg :key => values_array
     # require presence of each value or insert blank row
     # add missing rows
+    # criticism: This is actually a join...
+    # could be done as
+    # new_data_set_with_all_desired_keys.join(:key, some rule about nulling)
     def fill(*mapping)
       mapping = mapping.first
       # exception if mapping length other than to
@@ -177,6 +222,7 @@ module Dataframe
     # quite nasty - scans both collections.
     # some day I should build a lookup abstraction which could be optimized
     # against storage
+    # TODO - make some tests...
     def from(other_collection, join_condition, columns, prefix = 'other_')
       other_index = {}
       other_collection.pick(join_condition.values).each_with_index do |row, i|
@@ -191,13 +237,13 @@ module Dataframe
       Dataframe::Table.new(self.raw_data, new_chain)
     end
 
-    # arg: :column_name => column_rule
-    # nil out values that don't match given criteria
-    # can't build until I've figured out how to formulate the rules
-    def normalize_values(*rules)
-      # TODO
-    end
-
+    # # arg: :column_name => column_rule
+    # # nil out values that don't match given criteria
+    # # can't build until I've figured out how to formulate the rules
+    # # criticism: This is just compute...
+    # def normalize_values(*rules)
+    #   # TODO
+    # end
 
     # TODO options hash?
     def merge(other_collection, merge_keys, options = {:merge_type => :ignore})

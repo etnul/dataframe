@@ -94,6 +94,17 @@ class TestDataframe < Minitest::Test
     assert_equal [:foo, :year], result.first.keys.sort
   end
 
+  def test_group
+    source = Dataframe::Table.new((1..49).map {|i| {:mod => i % 7, :constant => 1, :number => i}}).sort(:mod)
+    grouped = source.group(:mod,
+      :count => lambda {|r| r[:constant].count},
+      :constant_sum => lambda {|r| r[:constant].compact.inject(&:+)},
+      :other_sum => lambda {|r| r[:number].compact.inject(&:+)}
+    ).all
+    assert_equal grouped.count, 7
+    assert_equal grouped.map {|r| r[:constant_sum]}, grouped.map {|r| r[:constant_sum]}
+  end
+
   # def test_radicals
   #   # r = Dataframe::Table.compute(:column_name) {}
   #   # Dataframe::Table.combine(r) # same as Dataframe::Table.compute(:column:name) {}

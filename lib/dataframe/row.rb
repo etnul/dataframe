@@ -27,6 +27,12 @@ module Dataframe
         self[method_sym]
       end
     end
+
+
+    def pick(*keys)
+      keys.map {|k| self[k]}
+    end
+
   end
 
 end

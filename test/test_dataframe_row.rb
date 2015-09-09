@@ -15,4 +15,10 @@ class TestDataframeRow < Minitest::Test
     assert_equal hash[:additional_name], 'Another value'
   end
 
+  def test_pick
+    row = Dataframe::Row({:a => 1, :b => 2, :c => 3})
+    picked = row.pick(:a, :b)
+    assert_equal picked, [1,2]
+  end
+
 end
