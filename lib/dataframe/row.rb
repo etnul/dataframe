@@ -3,6 +3,8 @@ module Dataframe
   def self.Row(obj)
     if obj.is_a?(Dataframe::RowType)
       obj
+    elsif obj.respond_to?(:as_dataframe_row)
+      obj.as_dataframe_row
     else
       obj.to_hash.extend(Dataframe::RowType).rowify
     end
@@ -27,7 +29,6 @@ module Dataframe
         self[method_sym]
       end
     end
-
 
     def pick(*keys)
       keys.map {|k| self[k]}

@@ -9,6 +9,7 @@ module Dataframe
   class Table
     include Enumerable
 
+    # TODO - just effing refactor!
     attr_accessor :raw_data, :chain
 
     def initialize(data, chain = nil)
@@ -248,6 +249,7 @@ module Dataframe
     # # nil out values that don't match given criteria
     # # can't build until I've figured out how to formulate the rules
     # # criticism: This is just compute...
+    # # don't implement
     # def normalize_values(*rules)
     #   # TODO
     # end
@@ -255,7 +257,8 @@ module Dataframe
     # TODO options hash?
     def merge(other_collection, merge_keys, options = {:merge_type => :ignore})
       # :ignore, :append, :replace, :fail
-      # run througn this, build index - append if desired
+      # run through this, build index - append if desired
+
     end
 
     def sort(fieldname = nil, &block)
@@ -293,6 +296,10 @@ module Dataframe
 
     def all
       self.enumerate.map {|r| r}
+    end
+
+    def values
+      self.map(&:values)
     end
 
     ## radicals
