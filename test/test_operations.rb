@@ -19,7 +19,13 @@ class TestOperations < Minitest::Test
       {'a' => 5, :year => 2012, :key => 'banan'},
       {'a' => 45, :year => 2014, :key => 'kontoer'}
     ]
+    @nilvals = [
+      {:foo => nil, :year => 2012, :bar => 'abe'},
+      {:foo => 5, :year => 2013, :bar => nil},
+      {:foo => 45, :year => 2014, :bar => 'konto'}
+    ]
     @a = Dataframe::Table.new(@source1)
+    @anil = Dataframe::Table.new(@nilvals)
     @b = Dataframe::Table.new(@source2)
     @c = Dataframe::Table.new(@string_source)
   end
@@ -41,25 +47,30 @@ class TestOperations < Minitest::Test
     selected = @a.select {|row| row.year == 2012}
     assert_equal selected.all.count, 1
     assert_equal selected.first, @a.first
+    assert_equal @a.keys.sort, selected.changes.keys.sort
   end
 
   def test_pick
-    picked = @a.pick(:foo, :year, :new)
+    fields = [:foo, :year, :new]
+    picked = @a.pick(*fields)
     assert picked
     assert_equal picked.all.first.keys.count, 3
     assert_equal picked.all.map(&:keys).flatten.uniq, [:foo, :year, :new]
     assert_equal picked.all.map(&:new).uniq, [nil]
+    assert_equal fields.sort, picked.changes.select {|k,v| v}.keys.sort
   end
 
   def test_rename
-    renamed = @a.rename(:bar => :baz, :noop => :frotz)
+    renamed = @anil.rename(:bar => :baz, :noop => :frotz)
     assert renamed
     assert_equal renamed.all.first[:baz], @a.all.first[:bar]
+    assert_equal [:bar], renamed.changes.select {|k,v| v}.keys.sort
   end
 
   def test_fill
     filled = @a.fill(:year => [1900, 1910, 1920, 1930])
     assert_equal filled.count, 7
+    assert_equal filled.keys.sort, filled.changes.keys.sort
   end
 
   def test_sort
@@ -67,8 +78,10 @@ class TestOperations < Minitest::Test
     sorted = bigger_a.sort {|a,b| a[:year] <=> b[:year] }
     assert sorted.is_a?(Dataframe::Table)
     assert_equal sorted.map {|s| s[:year]}, sorted.map {|s| s[:year]}.sort
+    assert_equal sorted.keys.sort, sorted.changes.keys.sort
     field_sorted = bigger_a.sort(:year)
     assert_equal field_sorted.map {|s| s[:year]}, sorted.map {|s| s[:year]}
+    assert_equal field_sorted.keys.sort, field_sorted.changes.keys.sort
   end
 
   def test_from
@@ -77,6 +90,7 @@ class TestOperations < Minitest::Test
   def test_default
     defaulted = @a.pick(:year, :new).default(:new => 3)
     assert_equal defaulted.all.map {|r| r[:new]}.inject(&:+), 9
+    assert_equal [:year, :new].sort, defaulted.changes.keys.sort
   end
 
   def test_normalize_values

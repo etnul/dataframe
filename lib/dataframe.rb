@@ -9,12 +9,37 @@ module Dataframe
   class Table
     include Enumerable
 
-    # TODO - just effing refactor!
     attr_accessor :raw_data, :chain
 
-    def initialize(data, chain = nil)
+    def initialize(data, chain = nil, mergeable_changes = nil)
       self.raw_data = data
       self.chain = chain || Dataframe::Table.noop
+      if self.raw_data.respond_to?(:changes)
+        @changed_keys = self.raw_data.changes
+      else
+        @changed_keys = {}
+      end
+      @changed_keys = mergeable_changes.merge(@changed_keys) if mergeable_changes;
+    end
+
+    def changes
+      @changed_keys.select {|k,v| v}
+    end
+
+    def changed?(key)
+      @changed_keys[key]
+    end
+
+    def merge_changes(keys)
+      keys.map do |key|
+        @changed_keys[key] = true
+      end
+      @changed_keys
+    end
+
+    # TODO - this could very easily be wrong!
+    def keys
+      self.enumerate.first.keys
     end
 
     def enumerate
@@ -35,6 +60,7 @@ module Dataframe
 
     # add computed column, return new data frame
     def compute(column_name, &block)
+      @changed_keys[column_name] = true
       new_chain = Proc.new do |row|
         row[column_name.to_sym] = block.call(chain.call(row))
         row
@@ -50,7 +76,9 @@ module Dataframe
     def reshape(&block)
       new_collection = Enumerator.new do |yielder| #possible wrap yielder (something like collection.emit)
         self.each {|row| block.call(row, yielder)}
-        block.call(nil, yielder)
+        row = block.call(nil, yielder)
+        row.keys.each {|k| @changed_keys[k]} if row
+        row
       end
       return Dataframe::Table.new(new_collection, Dataframe::Table.noop)
     end
@@ -95,8 +123,10 @@ module Dataframe
             outrow = template_row.dup
             by_value = row[by_field]
             outrow[by_field] = by_value
+            @changed_keys[by_field] = true
           end
           outrow[(options[:key_prefix] + row[per_field].to_s).to_sym] = row[value_field] if per_values.nil? || per_values.include?(row[per_field].to_sym)
+          @changed_keys[(options[:key_prefix] + row[per_field].to_s).to_sym] = true
         else #get the last row
           yielder.yield(Dataframe::Row(outrow))
           by_value = nil
@@ -124,6 +154,7 @@ module Dataframe
               # binding.pry
               rules.each do |field, rule|
                 outrow[field] = rule.call(collector_row)
+                @changed_keys[field] = true
               end
               yielder.yield(Dataframe::Row(outrow))
             end
@@ -140,6 +171,7 @@ module Dataframe
           outrow = {}
           rules.each do |field, rule|
             outrow[field] = rule.call(collector_row)
+            @changed_keys[field] = true
           end
           yielder.yield(Dataframe::Row(outrow))
           group_value = nil
@@ -151,7 +183,7 @@ module Dataframe
       new_collection = Enumerator.new do |yielder|
         self.each {|row| yielder.yield row if block.call(row)}
       end
-      return Dataframe::Table.new(new_collection, Dataframe::Table.noop)
+      return Dataframe::Table.new(new_collection, Dataframe::Table.noop, self.merge_changes(self.keys))
     end
 
     def pick(*names)
@@ -167,35 +199,35 @@ module Dataframe
         hn.each {|k,v| hn[k] = crow[k]}
         Dataframe.Row(hn)
       end
-      Dataframe::Table.new(self.raw_data, new_chain)
+      Dataframe::Table.new(self.raw_data, new_chain, self.merge_changes(hnames.keys))
     end
 
     # arg: :old_name => :new_name, :other_old_name => :other_new_name
     # renames a column
     def rename(*mapping)
+      old_new = Hash[*mapping].select {|k,v| self.enumerate.first.keys.include?(k)}
       new_chain = Proc.new do |row|
         crow = chain.call(row).dup
-        old_new = Hash[*mapping]
         old_new.each do |old_key, new_key|
           crow[new_key] = crow.delete(old_key)
         end
         Dataframe.Row(crow)
       end
-      Dataframe::Table.new(self.raw_data, new_chain)
+      Dataframe::Table.new(self.raw_data, new_chain, self.merge_changes(old_new.keys))
     end
 
     # arg: :column_name => :default_value, :other_column_name => :other_default_value
     # replace nil values with indicated default
     def default(*mapping)
+      key_default = Hash[*mapping]
       new_chain = Proc.new do |row|
         crow = chain.call(row).dup
-        key_default = Hash[*mapping]
         key_default.each do |key, default|
           crow[key] = default if crow[key].nil?
         end
         crow
       end
-      Dataframe::Table.new(self.raw_data, new_chain)
+      Dataframe::Table.new(self.raw_data, new_chain, self.merge_changes(key_default.keys))
     end
 
     # arg :key => values_array
@@ -215,16 +247,18 @@ module Dataframe
       mapping.values.first.each do |value|
         values[value] = true
       end
+      template = {}
+      self.keys.each {|k| template[k] = nil}
       new_collection = Enumerator.new do |yielder|
         self.each {|row| values.delete(row[key]); yielder.yield row}
         values.keys.each do |value|
-          row = {}
+          row = template.dup
           # TODO - ensure a fixed column list....
           row[key] = value
           yielder.yield row
         end
       end
-      return Dataframe::Table.new(new_collection, Dataframe::Table.noop)
+      return Dataframe::Table.new(new_collection, Dataframe::Table.noop, self.merge_changes(self.keys + [key]))
     end
 
     # quite nasty - scans both collections.
@@ -263,9 +297,9 @@ module Dataframe
 
     def sort(fieldname = nil, &block)
       if fieldname
-        Dataframe::Table.new(self.all.sort {|a,b| a[fieldname] <=> b[fieldname]})
+        Dataframe::Table.new(self.all.sort {|a,b| a[fieldname] <=> b[fieldname]}, nil, self.merge_changes(self.keys))
       else
-        Dataframe::Table.new(self.all.sort(&block))
+        Dataframe::Table.new(self.all.sort(&block), nil, self.merge_changes(self.keys))
       end
     end
 
@@ -311,5 +345,6 @@ module Dataframe
     def self.noop
       return Proc.new {|x| x}
     end
+
   end
 end
